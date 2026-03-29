@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System B — Temporal Exploration</title>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+    <script src="data.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(160deg, #ffffff 0%, #dce8f5 40%, #18232e 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+        }
+
+        /* ── Top Nav ── */
+        .top-nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #003865;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.45);
+            width: 100%;
+        }
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-logo img {
+            height: 38px;
+            filter: brightness(0) invert(1);
+            opacity: 0.95;
+            display: block;
+        }
+        .nav-links { display: flex; gap: 6px; align-items: center; }
+        .nav-item {
+            padding: 7px 18px;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.15); }
+        .nav-item.active {
+            background: #FFBE00;
+            color: #003865;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* ── Container ── */
+        .container {
+            background: rgba(0,0,0,0.22);
+            border-radius: 14px;
+            padding: 32px 36px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+            max-width: 1200px;
+            width: calc(100% - 40px);
+            margin: 25px 0 35px;
+            backdrop-filter: blur(4px);
+        }
+
+        /* ── Header ── */
+        .system-tag {
+            display: inline-block;
+            background: #FFBE00;
+            color: #003865;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 3px 10px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            background: linear-gradient(to right, #4ab3f4, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.35;
+        }
+        .separator {
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(to right, #FFBE00, transparent);
+            border-radius: 4px;
+            margin: 14px 0 18px;
+        }
+
+        /* ── Info Box ── */
+        .highlight-box {
+            background: rgba(255,255,255,0.93);
+            color: #1a1a1a;
+            padding: 20px 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+            margin-bottom: 20px;
+            border-left: 4px solid #003865;
+        }
+        .dataset-line {
+            font-size: 13px;
+            color: #444;
+            margin-bottom: 14px;
+        }
+        .dataset-line a { color: #003865; font-weight: bold; text-decoration: none; }
+        .dataset-line a:hover { text-decoration: underline; }
+        .tasks-label {
+            font-weight: bold;
+            color: #003865;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 9px;
+        }
+        .task-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+        .task-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: #333; }
+        .task-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 22px;
+            padding: 0 7px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 11px;
+            color: white;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .t1 { background: #3498db; }
+        .t2 { background: #27ae60; }
+        .t3 { background: #e74c3c; }
+        .gs-badge {
+            display: inline-block;
+            background: #8E44AD;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .interaction-note {
+            font-size: 12.5px;
+            color: #555;
+            background: #f0f4f8;
+            padding: 9px 14px;
+            border-radius: 8px;
+            border-left: 3px solid #FFBE00;
+        }
+
+        #vis { width: 100%; margin-top: 8px; }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation -->
+    <header class="top-nav">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">
+                <img src="https://www.gla.ac.uk/3t4/img/ug-keyline.svg" alt="University of Glasgow">
+            </a>
+            <nav class="nav-links">
+                <a href="index.html" class="nav-item">Home</a>
+                <a href="System_A.html" class="nav-item">System A</a>
+                <span class="nav-item active">System B</span>
+                <a href="System_C.html" class="nav-item">System C</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <span class="system-tag">System B</span>
+        <div class="title">Temporal Exploration of Road Traffic Accidents</div>
+        <div class="separator"></div>
+
+        <div class="highlight-box">
+            <div class="dataset-line">
+                <strong>Dataset:</strong> Leeds Road Traffic Accidents &mdash;
+                <a href="https://www.kaggle.com/datasets/thedevastator/leeds-road-traffic-accidents-2009-2018" target="_blank">Kaggle Source &#8599;</a>
+            </div>
+            <div class="tasks-label">Visualisation Tasks</div>
+            <div class="task-list">
+                <div class="task-item">
+                    <span class="task-badge t1">T1</span>
+                    <div><strong>Explore spatial features</strong> [Search &rarr; Explore; Target: Feature] &mdash;
+                    Browse the map; it responds to period and hour selections and feeds back to the hour distribution.</div>
+                </div>
+                <div class="task-item">
+                    <span class="task-badge t2">T2</span>
+                    <div><strong>Discover temporal distribution</strong> [Analyse &rarr; Discover; Target: Distribution] &mdash;
+                    The hour bar chart shows accident frequency within the selected time-of-day period.</div>
+                </div>
+                <div class="task-item">
+                    <span class="task-badge t3">T3</span>
+                    <div><strong>Select a subset and summarise severity</strong> [Search &rarr; Browse; Query &rarr; Summarise] &mdash;
+                    Period click + hour brush + map brush each define a subset; the severity chart summarises the result.</div>
+                </div>
+            </div>
+            <div class="interaction-note">
+                <span class="gs-badge">Generalised Selection</span><br>
+                Click a <strong>period wedge</strong> (donut) to select <em>all</em> hours in that semantic period
+                (Night / Morning Rush / Daytime / Evening Rush / Late Evening).
+                Then drag the hour bar to narrow within the period. Drag the map for spatial refinement.
+                This implements a <strong>Hour &rarr; Time Period</strong> semantic hierarchy traversal.
+            </div>
+        </div>
+
+        <div id="vis"></div>
+    </div>
+
+    <!-- ── Comparison Dashboard ── -->
+    <div class="container" style="margin-top:0;">
+        <span class="system-tag" style="background:#8E44AD;">Comparison Mode</span>
+        <div class="title" style="font-size:20px;">Selection A vs Selection B — Four-Panel Comparison</div>
+        <div class="separator" style="background:linear-gradient(to right,#8E44AD,transparent);"></div>
+
+        <div class="highlight-box" style="border-left-color:#8E44AD;">
+            <div class="tasks-label" style="color:#8E44AD;">How to Use</div>
+            <div class="task-list">
+                <div class="task-item">
+                    <span class="task-badge" style="background:#4488DD;">A</span>
+                    <div><strong>Drag on the left chart</strong> to brush a range of years for <strong style="color:#4488DD;">Selection A</strong>.</div>
+                </div>
+                <div class="task-item">
+                    <span class="task-badge" style="background:#FF7722;">B</span>
+                    <div><strong>Drag on the right chart</strong> to brush a range of years for <strong style="color:#FF7722;">Selection B</strong>.</div>
+                </div>
+            </div>
+            <div class="interaction-note">
+                The <strong>map</strong> overlays both selections (blue = A, orange = B) and the <strong>severity chart</strong> shows side-by-side counts so you can directly compare the two periods.
+            </div>
+        </div>
+
+        <div id="vis-compare"></div>
+    </div>
+
+    <script>
+        const spec = {
+            "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+            "data": {"values": accidentData},
+            "transform": [
+                {
+                    "calculate": "datum.hour <= 5 ? 'Night (0-5)' : datum.hour <= 9 ? 'Morning Rush (6-9)' : datum.hour <= 15 ? 'Daytime (10-15)' : datum.hour <= 19 ? 'Evening Rush (16-19)' : 'Late Evening (20-23)'",
+                    "as": "time_period"
+                }
+            ],
+            "vconcat": [
+                {
+                    "hconcat": [
+                        {
+                            "title": {
+                                "text": "Generalised Selection — Time-of-Day Period",
+                                "subtitle": "Click a wedge to select all hours in that period"
+                            },
+                            "width": 280,
+                            "height": 280,
+                            "mark": {"type": "arc", "innerRadius": 60, "outerRadius": 130},
+                            "params": [
+                                {"name": "period_sel", "select": {"type": "point", "fields": ["time_period"]}}
+                            ],
+                            "transform": [
+                                {
+                                    "aggregate": [{"op": "distinct", "field": "accident_id", "as": "accident"}],
+                                    "groupby": ["time_period"]
+                                }
+                            ],
+                            "encoding": {
+                                "theta": {"field": "accident", "type": "quantitative", "stack": true},
+                                "color": {
+                                    "field": "time_period", "type": "nominal",
+                                    "sort": ["Night (0-5)", "Morning Rush (6-9)", "Daytime (10-15)", "Evening Rush (16-19)", "Late Evening (20-23)"],
+                                    "scale": {
+                                        "domain": ["Night (0-5)", "Morning Rush (6-9)", "Daytime (10-15)", "Evening Rush (16-19)", "Late Evening (20-23)"],
+                                        "range": ["#2C3E50", "#E67E22", "#F1C40F", "#E74C3C", "#8E44AD"]
+                                    },
+                                    "legend": {"title": "Time Period"}
+                                },
+                                "opacity": {"condition": {"param": "period_sel", "value": 1.0}, "value": 0.25},
+                                "tooltip": [
+                                    {"field": "time_period", "type": "nominal", "title": "Period"},
+                                    {"field": "accident", "type": "quantitative", "title": "Accidents"}
+                                ]
+                            }
+                        },
+                        {
+                            "title": {
+                                "text": "T2 — Hour Distribution",
+                                "subtitle": "Drag to narrow within selected period · responds to map brush"
+                            },
+                            "width": 420,
+                            "height": 280,
+                            "mark": "bar",
+                            "params": [
+                                {"name": "time_brush", "select": {"type": "interval", "encodings": ["x"]}}
+                            ],
+                            "transform": [
+                                {"filter": {"param": "period_sel"}},
+                                {"filter": {"param": "map_brush"}},
+                                {
+                                    "aggregate": [{"op": "distinct", "field": "accident_id", "as": "accident"}],
+                                    "groupby": ["hour"]
+                                }
+                            ],
+                            "encoding": {
+                                "x": {"field": "hour", "type": "ordinal", "title": "Hour of Day (0-23)"},
+                                "y": {"field": "accident", "type": "quantitative", "title": "Number of Accidents"},
+                                "color": {
+                                    "condition": {"param": "time_brush", "value": "#1f77b4"},
+                                    "value": "#d3d3d3"
+                                },
+                                "tooltip": [
+                                    {"field": "hour", "type": "ordinal", "title": "Hour"},
+                                    {"field": "accident", "type": "quantitative", "title": "Accidents"}
+                                ]
+                            }
+                        }
+                    ],
+                    "resolve": {"scale": {"color": "independent"}}
+                },
+                {
+                    "hconcat": [
+                        {
+                            "title": {
+                                "text": "T1 — Accident Locations",
+                                "subtitle": "Drag map to reshape hour distribution (bidirectional)"
+                            },
+                            "width": 400,
+                            "height": 300,
+                            "mark": {"type": "point", "filled": true, "size": 10, "opacity": 0.4},
+                            "params": [
+                                {"name": "map_brush", "select": {"type": "interval"}}
+                            ],
+                            "transform": [
+                                {"filter": {"param": "period_sel"}},
+                                {"filter": {"param": "time_brush"}},
+                                {"filter": {"param": "severity_sel"}}
+                            ],
+                            "encoding": {
+                                "x": {"field": "easting", "type": "quantitative", "scale": {"zero": false}, "title": "Grid Ref Easting"},
+                                "y": {"field": "northing", "type": "quantitative", "scale": {"zero": false}, "title": "Grid Ref Northing"},
+                                "color": {
+                                    "field": "severity", "type": "nominal",
+                                    "scale": {
+                                        "domain": ["Slight", "Serious", "Fatal"],
+                                        "range": ["#4CAF50", "#FC8D59", "#D73027"]
+                                    },
+                                    "title": "Severity"
+                                },
+                                "tooltip": [
+                                    {"field": "accident_date", "title": "Date"},
+                                    {"field": "hour", "type": "ordinal", "title": "Hour"},
+                                    {"field": "time_period", "type": "nominal", "title": "Period"},
+                                    {"field": "severity", "type": "nominal", "title": "Severity"}
+                                ]
+                            }
+                        },
+                        {
+                            "title": "T3 — Severity of Selected Subset",
+                            "width": 180,
+                            "height": 300,
+                            "mark": "bar",
+                            "params": [
+                                {
+                                    "name": "severity_sel",
+                                    "select": {"type": "point", "fields": ["severity"]},
+                                    "bind": "legend"
+                                }
+                            ],
+                            "transform": [
+                                {"filter": {"param": "period_sel"}},
+                                {"filter": {"param": "time_brush"}},
+                                {"filter": {"param": "map_brush"}},
+                                {
+                                    "aggregate": [{"op": "distinct", "field": "accident_id", "as": "accident"}],
+                                    "groupby": ["severity"]
+                                }
+                            ],
+                            "encoding": {
+                                "x": {"field": "severity", "type": "nominal", "title": "Severity"},
+                                "y": {"field": "accident", "type": "quantitative", "title": "Number of Accidents"},
+                                "color": {
+                                    "condition": {
+                                        "param": "severity_sel",
+                                        "field": "severity", "type": "nominal",
+                                        "scale": {
+                                            "domain": ["Slight", "Serious", "Fatal"],
+                                            "range": ["#4CAF50", "#FC8D59", "#D73027"]
+                                        }
+                                    },
+                                    "value": "lightgray"
+                                },
+                                "tooltip": [
+                                    {"field": "severity", "type": "nominal", "title": "Severity"},
+                                    {"field": "accident", "type": "quantitative", "title": "Accidents"}
+                                ]
+                            }
+                        }
+                    ],
+                    "resolve": {"scale": {"color": "independent"}}
+                }
+            ],
+            "config": {"axis": {"gridOpacity": 0.3}, "view": {"stroke": null}}
+        };
+
+        vegaEmbed('#vis', spec, {renderer: 'svg', actions: false}).catch(console.error);
+
+        /* ── Comparison Dashboard Spec ── */
+        const compSpec = {
+            "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+            "data": {"values": accidentData},
+            "spacing": 24,
+            "vconcat": [
+                {
+                    "spacing": 28,
+                    "hconcat": [
+                        {
+                            "title": {
+                                "text": "Selection A — Drag to define year range",
+                                "color": "#4488DD",
+                                "fontSize": 13,
+                                "fontWeight": "bold"
+                            },
+                            "width": 490,
+                            "height": 180,
+                            "mark": {"type": "bar", "width": {"band": 0.7}, "cornerRadiusTopLeft": 3, "cornerRadiusTopRight": 3},
+                            "params": [
+                                {"name": "brush_a", "select": {"type": "interval", "encodings": ["x"]}}
+                            ],
+                            "transform": [
+                                {"aggregate": [{"op": "count", "as": "n"}], "groupby": ["year"]}
+                            ],
+                            "encoding": {
+                                "x": {
+                                    "field": "year", "type": "quantitative",
+                                    "axis": {"format": "d", "tickCount": 10},
+                                    "title": "Year",
+                                    "scale": {"domain": [2008.5, 2018.5]}
+                                },
+                                "y": {"field": "n", "type": "quantitative", "title": "Accidents"},
+                                "color": {
+                                    "condition": {"param": "brush_a", "value": "#4488DD"},
+                                    "value": "#aaaaaa"
+                                },
+                                "tooltip": [
+                                    {"field": "year", "type": "quantitative", "title": "Year", "format": "d"},
+                                    {"field": "n", "type": "quantitative", "title": "Accidents"}
+                                ]
+                            }
+                        },
+                        {
+                            "title": {
+                                "text": "Selection B — Drag to define year range",
+                                "color": "#FF7722",
+                                "fontSize": 13,
+                                "fontWeight": "bold"
+                            },
+                            "width": 490,
+                            "height": 180,
+                            "mark": {"type": "bar", "width": {"band": 0.7}, "cornerRadiusTopLeft": 3, "cornerRadiusTopRight": 3},
+                            "params": [
+                                {"name": "brush_b", "select": {"type": "interval", "encodings": ["x"]}}
+                            ],
+                            "transform": [
+                                {"aggregate": [{"op": "count", "as": "n"}], "groupby": ["year"]}
+                            ],
+                            "encoding": {
+                                "x": {
+                                    "field": "year", "type": "quantitative",
+                                    "axis": {"format": "d", "tickCount": 10},
+                                    "title": "Year",
+                                    "scale": {"domain": [2008.5, 2018.5]}
+                                },
+                                "y": {"field": "n", "type": "quantitative", "title": "Accidents"},
+                                "color": {
+                                    "condition": {"param": "brush_b", "value": "#FF7722"},
+                                    "value": "#aaaaaa"
+                                },
+                                "tooltip": [
+                                    {"field": "year", "type": "quantitative", "title": "Year", "format": "d"},
+                                    {"field": "n", "type": "quantitative", "title": "Accidents"}
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "spacing": 28,
+                    "hconcat": [
+                        {
+                            "title": {
+                                "text": "Spatial Comparison  (● A = blue   ● B = orange)",
+                                "fontSize": 13,
+                                "fontWeight": "bold"
+                            },
+                            "width": 620,
+                            "height": 320,
+                            "layer": [
+                                {
+                                    "mark": {"type": "point", "filled": true, "size": 10, "opacity": 0.45},
+                                    "transform": [{"filter": {"param": "brush_a"}}],
+                                    "encoding": {
+                                        "x": {"field": "easting", "type": "quantitative", "scale": {"zero": false}, "title": "Easting"},
+                                        "y": {"field": "northing", "type": "quantitative", "scale": {"zero": false}, "title": "Northing"},
+                                        "color": {"value": "#4488DD"},
+                                        "tooltip": [
+                                            {"field": "accident_date", "title": "Date"},
+                                            {"field": "year", "type": "quantitative", "title": "Year", "format": "d"},
+                                            {"field": "severity", "type": "nominal", "title": "Severity"}
+                                        ]
+                                    }
+                                },
+                                {
+                                    "mark": {"type": "point", "filled": true, "size": 10, "opacity": 0.45},
+                                    "transform": [{"filter": {"param": "brush_b"}}],
+                                    "encoding": {
+                                        "x": {"field": "easting", "type": "quantitative", "scale": {"zero": false}, "title": "Easting"},
+                                        "y": {"field": "northing", "type": "quantitative", "scale": {"zero": false}, "title": "Northing"},
+                                        "color": {"value": "#FF7722"},
+                                        "tooltip": [
+                                            {"field": "accident_date", "title": "Date"},
+                                            {"field": "year", "type": "quantitative", "title": "Year", "format": "d"},
+                                            {"field": "severity", "type": "nominal", "title": "Severity"}
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "title": {
+                                "text": "Severity Distribution  (■ A = blue   ■ B = orange)",
+                                "fontSize": 13,
+                                "fontWeight": "bold"
+                            },
+                            "width": 340,
+                            "height": 320,
+                            "layer": [
+                                {
+                                    "mark": {"type": "bar", "xOffset": -18, "width": 32, "cornerRadiusTopLeft": 3, "cornerRadiusTopRight": 3},
+                                    "transform": [
+                                        {"filter": {"param": "brush_a"}},
+                                        {"aggregate": [{"op": "count", "as": "n"}], "groupby": ["severity"]}
+                                    ],
+                                    "encoding": {
+                                        "x": {"field": "severity", "type": "nominal", "title": "Severity",
+                                              "sort": ["Slight", "Serious", "Fatal"]},
+                                        "y": {"field": "n", "type": "quantitative", "title": "Accidents"},
+                                        "color": {"value": "#4488DD"},
+                                        "tooltip": [
+                                            {"field": "severity", "type": "nominal", "title": "Severity (A)"},
+                                            {"field": "n", "type": "quantitative", "title": "Count"}
+                                        ]
+                                    }
+                                },
+                                {
+                                    "mark": {"type": "bar", "xOffset": 18, "width": 32, "cornerRadiusTopLeft": 3, "cornerRadiusTopRight": 3},
+                                    "transform": [
+                                        {"filter": {"param": "brush_b"}},
+                                        {"aggregate": [{"op": "count", "as": "n"}], "groupby": ["severity"]}
+                                    ],
+                                    "encoding": {
+                                        "x": {"field": "severity", "type": "nominal", "title": "Severity",
+                                              "sort": ["Slight", "Serious", "Fatal"]},
+                                        "y": {"field": "n", "type": "quantitative", "title": "Accidents"},
+                                        "color": {"value": "#FF7722"},
+                                        "tooltip": [
+                                            {"field": "severity", "type": "nominal", "title": "Severity (B)"},
+                                            {"field": "n", "type": "quantitative", "title": "Count"}
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "config": {"axis": {"gridOpacity": 0.3}, "view": {"stroke": null}}
+        };
+
+        vegaEmbed('#vis-compare', compSpec, {renderer: 'svg', actions: false}).catch(console.error);
+    </script>
+</body>
+</html>

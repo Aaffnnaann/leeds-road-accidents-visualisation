@@ -1,0 +1,8 @@
+node_modules/
+video_frames/
+make_video.js
+encode_only.js
+package-lock.json
+package.json
+*.zip
+.claude/
