@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System C — Condition Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+    <script src="data.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(160deg, #ffffff 0%, #dce8f5 40%, #18232e 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+        }
+
+        /* ── Top Nav ── */
+        .top-nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #003865;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.45);
+            width: 100%;
+        }
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-logo img {
+            height: 38px;
+            filter: brightness(0) invert(1);
+            opacity: 0.95;
+            display: block;
+        }
+        .nav-links { display: flex; gap: 6px; align-items: center; }
+        .nav-item {
+            padding: 7px 18px;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.15); }
+        .nav-item.active {
+            background: #FFBE00;
+            color: #003865;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* ── Container ── */
+        .container {
+            background: rgba(0,0,0,0.22);
+            border-radius: 14px;
+            padding: 32px 36px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+            max-width: 1200px;
+            width: calc(100% - 40px);
+            margin: 25px 0 35px;
+            backdrop-filter: blur(4px);
+        }
+
+        /* ── Header ── */
+        .system-tag {
+            display: inline-block;
+            background: #FFBE00;
+            color: #003865;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 3px 10px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            background: linear-gradient(to right, #4ab3f4, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.35;
+        }
+        .separator {
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(to right, #FFBE00, transparent);
+            border-radius: 4px;
+            margin: 14px 0 18px;
+        }
+
+        /* ── Info Box ── */
+        .highlight-box {
+            background: rgba(255,255,255,0.93);
+            color: #1a1a1a;
+            padding: 20px 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+            margin-bottom: 20px;
+            border-left: 4px solid #003865;
+        }
+        .dataset-line {
+            font-size: 13px;
+            color: #444;
+            margin-bottom: 14px;
+        }
+        .dataset-line a { color: #003865; font-weight: bold; text-decoration: none; }
+        .dataset-line a:hover { text-decoration: underline; }
+        .tasks-label {
+            font-weight: bold;
+            color: #003865;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 9px;
+        }
+        .task-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+        .task-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: #333; }
+        .task-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 22px;
+            padding: 0 7px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 11px;
+            color: white;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .t1 { background: #3498db; }
+        .t2 { background: #27ae60; }
+        .t3 { background: #e74c3c; }
+        .interaction-note {
+            font-size: 12.5px;
+            color: #555;
+            background: #f0f4f8;
+            padding: 9px 14px;
+            border-radius: 8px;
+            border-left: 3px solid #FFBE00;
+        }
+
+        #vis { width: 100%; margin-top: 8px; }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation -->
+    <header class="top-nav">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">
+                <img src="https://www.gla.ac.uk/3t4/img/ug-keyline.svg" alt="University of Glasgow">
+            </a>
+            <nav class="nav-links">
+                <a href="index.html" class="nav-item">Home</a>
+                <a href="System_A.html" class="nav-item">System A</a>
+                <a href="System_B.html" class="nav-item">System B</a>
+                <span class="nav-item active">System C</span>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <span class="system-tag">System C</span>
+        <div class="title">Condition-Centric Exploration of Road Traffic Accidents</div>
+        <div class="separator"></div>
+
+        <div class="highlight-box">
+            <div class="dataset-line">
+                <strong>Dataset:</strong> Leeds Road Traffic Accidents &mdash;
+                <a href="https://www.kaggle.com/datasets/thedevastator/leeds-road-traffic-accidents-2009-2018" target="_blank">Kaggle Source &#8599;</a>
+            </div>
+            <div class="tasks-label">Visualisation Tasks</div>
+            <div class="task-list">
+                <div class="task-item">
+                    <span class="task-badge t1">T1</span>
+                    <div><strong>Explore spatial features</strong> [Search &rarr; Explore; Target: Feature] &mdash;
+                    Browse the map to discover hotspots; it responds to condition and hour selections.</div>
+                </div>
+                <div class="task-item">
+                    <span class="task-badge t2">T2</span>
+                    <div><strong>Discover temporal distribution</strong> [Analyse &rarr; Discover; Target: Distribution] &mdash;
+                    The stacked area chart reveals how each road surface condition contributes to accidents across the day.</div>
+                </div>
+                <div class="task-item">
+                    <span class="task-badge t3">T3</span>
+                    <div><strong>Select a subset and summarise severity</strong> [Search &rarr; Browse; Query &rarr; Summarise] &mdash;
+                    Click a road surface, drag an hour range, and/or drag the map to filter; severity chart updates.</div>
+                </div>
+            </div>
+            <div class="interaction-note">
+                <strong>Bidirectional Hub:</strong> The map is the shared bidirectional hub &mdash; dragging it reshapes
+                <em>both</em> the condition bar (top-left) <em>and</em> the stacked area chart (top-right) simultaneously.
+                Condition bar &harr; Map and Hour area &harr; Map are both fully bidirectional.
+            </div>
+        </div>
+
+        <div id="vis"></div>
+    </div>
+
+    <script>
+        const spec = {
+            "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+            "data": {"values": accidentData},
+            "transform": [
+                {
+                    "calculate": "indexof(datum.lighting_conditions, 'Daylight') >= 0 ? 'Daylight' : 'Darkness'",
+                    "as": "lighting"
+                }
+            ],
+            "vconcat": [
+                {
+                    "hconcat": [
+                        {
+                            "title": {
+                                "text": "T3 — Road Surface & Lighting Conditions",
+                                "subtitle": "Click a surface bar to select · map brush reshapes this chart"
+                            },
+                            "width": 320,
+                            "height": 220,
+                            "mark": "bar",
+                            "params": [
+                                {"name": "surface_sel", "select": {"type": "point", "fields": ["road_surface"]}}
+                            ],
+                            "transform": [
+                                {"filter": {"param": "map_brush"}},
+                                {
+                                    "aggregate": [{"op": "distinct", "field": "accident_id", "as": "accident"}],
+                                    "groupby": ["road_surface", "lighting"]
+                                }
+                            ],
+                            "encoding": {
+                                "x": {
+                                    "field": "road_surface", "type": "nominal",
+                                    "sort": ["Dry", "Wet / Damp", "Frost / Ice", "Snow"],
+                                    "title": "Road Surface Condition"
+                                },
+                                "y": {"field": "accident", "type": "quantitative", "title": "Number of Accidents", "stack": "zero"},
+                                "color": {
+                                    "field": "lighting", "type": "nominal",
+                                    "scale": {
+                                        "domain": ["Daylight", "Darkness"],
+                                        "range": ["#F5CBA7", "#1A252F"]
+                                    },
+                                    "title": "Lighting"
+                                },
+                                "opacity": {"condition": {"param": "surface_sel", "value": 1.0}, "value": 0.25},
+                                "tooltip": [
+                                    {"field": "road_surface", "type": "nominal", "title": "Road Surface"},
+                                    {"field": "lighting", "type": "nominal", "title": "Lighting"},
+                                    {"field": "accident", "type": "quantitative", "title": "Accidents"}
+                                ]
+                            }
+                        },
+                        {
+                            "title": {
+                                "text": "T2 — Accident Profile by Hour & Road Condition",
+                                "subtitle": "Drag to select hour range · map brush reshapes this chart"
+                            },
+                            "width": 450,
+                            "height": 220,
+                            "mark": {"type": "area"},
+                            "params": [
+                                {"name": "time_brush", "select": {"type": "interval", "encodings": ["x"]}}
+                            ],
+                            "transform": [
+                                {"filter": {"param": "surface_sel"}},
+                                {"filter": {"param": "map_brush"}},
+                                {
+                                    "aggregate": [{"op": "distinct", "field": "accident_id", "as": "accident"}],
+                                    "groupby": ["hour", "road_surface"]
+                                }
+                            ],
+                            "encoding": {
+                                "x": {
+                                    "field": "hour", "type": "quantitative",
+                                    "title": "Hour of Day (0-23)",
+                                    "scale": {"domain": [0, 23]}
+                                },
+                                "y": {"field": "accident", "type": "quantitative", "title": "Number of Accidents", "stack": "zero"},
+                                "color": {
+                                    "field": "road_surface", "type": "nominal",
+                                    "sort": ["Dry", "Wet / Damp", "Frost / Ice", "Snow"],
+                                    "scale": {
+                                        "domain": ["Dry", "Wet / Damp", "Frost / Ice", "Snow"],
+                                        "range": ["#E59866", "#5B9BD5", "#85C1E9", "#AED6F1"]
+                                    },
+                                    "title": "Road Surface"
+                                },
+                                "opacity": {"condition": {"param": "time_brush", "value": 0.85}, "value": 0.2},
+                                "tooltip": [
+                                    {"field": "hour", "type": "quantitative", "title": "Hour"},
+                                    {"field": "road_surface", "type": "nominal", "title": "Road Surface"},
+                                    {"field": "accident", "type": "quantitative", "title": "Accidents"}
+                                ]
+                            }
+                        }
+                    ],
+                    "resolve": {"scale": {"color": "independent"}}
+                },
+                {
+                    "hconcat": [
+                        {
+                            "title": {
+                                "text": "T1 — Accident Locations",
+                                "subtitle": "Drag map to reshape condition bar & hour area chart (bidirectional hub)"
+                            },
+                            "width": 470,
+                            "height": 320,
+                            "mark": {"type": "point", "filled": true, "size": 14, "opacity": 0.45},
+                            "params": [
+                                {"name": "map_brush", "select": {"type": "interval"}}
+                            ],
+                            "transform": [
+                                {"filter": {"param": "surface_sel"}},
+                                {"filter": {"param": "time_brush"}}
+                            ],
+                            "encoding": {
+                                "x": {"field": "easting", "type": "quantitative", "scale": {"zero": false}, "title": "Grid Ref: Easting"},
+                                "y": {"field": "northing", "type": "quantitative", "scale": {"zero": false}, "title": "Grid Ref: Northing"},
+                                "color": {
+                                    "field": "severity", "type": "nominal",
+                                    "scale": {
+                                        "domain": ["Slight", "Serious", "Fatal"],
+                                        "range": ["#4CAF50", "#FC8D59", "#D73027"]
+                                    },
+                                    "title": "Severity"
+                                },
+                                "tooltip": [
+                                    {"field": "accident_date", "title": "Date"},
+                                    {"field": "hour", "type": "ordinal", "title": "Hour"},
+                                    {"field": "severity", "type": "nominal", "title": "Severity"},
+                                    {"field": "road_surface", "type": "nominal", "title": "Road Surface"},
+                                    {"field": "lighting", "type": "nominal", "title": "Lighting"},
+                                    {"field": "num_casualties", "type": "quantitative", "title": "Casualties"}
+                                ]
+                            }
+                        },
+                        {
+                            "title": "T3 — Severity of Selected Subset",
+                            "width": 270,
+                            "height": 320,
+                            "mark": "bar",
+                            "transform": [
+                                {"filter": {"param": "surface_sel"}},
+                                {"filter": {"param": "time_brush"}},
+                                {"filter": {"param": "map_brush"}},
+                                {
+                                    "aggregate": [{"op": "distinct", "field": "accident_id", "as": "accident"}],
+                                    "groupby": ["severity"]
+                                }
+                            ],
+                            "encoding": {
+                                "x": {
+                                    "field": "severity", "type": "nominal",
+                                    "sort": ["Fatal", "Serious", "Slight"],
+                                    "title": "Severity"
+                                },
+                                "y": {"field": "accident", "type": "quantitative", "title": "Number of Accidents"},
+                                "color": {
+                                    "field": "severity", "type": "nominal",
+                                    "scale": {
+                                        "domain": ["Slight", "Serious", "Fatal"],
+                                        "range": ["#4CAF50", "#FC8D59", "#D73027"]
+                                    },
+                                    "legend": null
+                                },
+                                "tooltip": [
+                                    {"field": "severity", "type": "nominal", "title": "Severity"},
+                                    {"field": "accident", "type": "quantitative", "title": "Accidents"}
+                                ]
+                            }
+                        }
+                    ],
+                    "resolve": {"scale": {"color": "independent"}}
+                }
+            ],
+            "config": {"axis": {"gridOpacity": 0.3}, "view": {"stroke": null}}
+        };
+
+        vegaEmbed('#vis', spec, {renderer: 'svg', actions: false}).catch(console.error);
+    </script>
+</body>
+</html>
